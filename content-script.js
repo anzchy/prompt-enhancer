@@ -14,39 +14,12 @@ function isDarkMode() {
   return document.documentElement.classList.contains("dark");
 }
 function applyButtonStyles(button) {
-  const isDark = isDarkMode();
-  button.style.height = "36px";
-  button.style.padding = "0 16px";
-  button.style.display = "flex";
-  button.style.alignItems = "center";
-  button.style.justifyContent = "center";
-  button.style.borderRadius = "9999px";
-  button.style.border = "none";
-  button.style.cursor = "pointer";
-  button.style.fontSize = "14px";
-  button.style.fontWeight = "500";
-  button.style.transition = "opacity 0.2s";
-  button.style.whiteSpace = "nowrap";
-  button.style.background = isDark ? "#ffffff" : "#000000";
-  button.style.color = isDark ? "#000000" : "#ffffff";
-  button.addEventListener("mouseenter", () => {
-    if (!button.disabled) {
-      button.style.opacity = "0.7";
-    }
-  });
-  button.addEventListener("mouseleave", () => {
-    button.style.opacity = "1";
-  });
-  if (button.disabled) {
-    button.style.opacity = "0.5";
-    button.style.cursor = "not-allowed";
-  }
+  console.log("[Prompt Optimizer] Button styles applied via CSS");
 }
 function observeThemeChanges(button) {
   const observer = new MutationObserver(() => {
     const isDark = isDarkMode();
-    button.style.background = isDark ? "#ffffff" : "#000000";
-    button.style.color = isDark ? "#000000" : "#ffffff";
+    console.log("[Prompt Optimizer] Theme changed to:", isDark ? "dark" : "light");
   });
   observer.observe(document.documentElement, {
     attributes: true,
@@ -58,9 +31,10 @@ function observeThemeChanges(button) {
 // src/content/index.ts
 var BUTTON_CLASS = "prompt-enhancer-btn";
 var BUTTON_TEXT = "\u4F18\u5316\u6307\u4EE4";
+console.log("[Prompt Optimizer] Content script loaded on:", window.location.href);
 function selectorMap(host) {
   if (host.includes("chatgpt.com") || host.includes("chat.openai.com")) {
-    return ['div[role="textbox"]', 'textarea[placeholder*="Message"]'];
+    return ['div[role="textbox"]', "#prompt-textarea", 'textarea[placeholder*="Message"]'];
   }
   if (host.includes("manus.im")) {
     return ['div[contenteditable="true"][role="textbox"]', "textarea", 'div[role="textbox"]'];
@@ -72,10 +46,15 @@ function selectorMap(host) {
 }
 function findPromptInput() {
   const selectors = selectorMap(window.location.host);
+  console.log("[Prompt Optimizer] Trying selectors:", selectors);
   for (const selector of selectors) {
     const el = document.querySelector(selector);
-    if (el) return el;
+    if (el) {
+      console.log("[Prompt Optimizer] \u2705 Found input element:", selector, el);
+      return el;
+    }
   }
+  console.warn("[Prompt Optimizer] \u274C Could not find input element");
   return null;
 }
 function getPromptValue(el) {
@@ -94,7 +73,11 @@ function setPromptValue(el, value) {
   el.dispatchEvent(new Event("input", { bubbles: true }));
 }
 function insertButton(target) {
-  if (document.querySelector(`.${BUTTON_CLASS}`)) return;
+  if (document.querySelector(`.${BUTTON_CLASS}`)) {
+    console.log("[Prompt Optimizer] Button already exists");
+    return;
+  }
+  console.log("[Prompt Optimizer] Creating button...");
   const button = document.createElement("button");
   button.type = "button";
   button.textContent = BUTTON_TEXT;
@@ -102,42 +85,68 @@ function insertButton(target) {
   applyButtonStyles(button);
   observeThemeChanges(button);
   button.addEventListener("click", () => handleOptimize(button, target));
+  console.log("[Prompt Optimizer] Trying insertion strategies...");
+  const plusButtonEl = document.querySelector('[data-testid="composer-plus-btn"]');
+  console.log("[Prompt Optimizer] Strategy 1 - Plus button found:", plusButtonEl);
+  if (plusButtonEl) {
+    const plusContainer = plusButtonEl.parentElement;
+    console.log("[Prompt Optimizer] Plus button container:", plusContainer);
+    if (plusContainer) {
+      plusContainer.appendChild(button);
+      console.log("[Prompt Optimizer] \u2705 Button inserted via Strategy 1 (next to + button)");
+      return;
+    }
+  }
   const leadingArea = document.querySelector('[class*="grid-area:leading"]');
-  const plusButtonSpan = leadingArea?.querySelector("span.flex");
-  if (plusButtonSpan) {
-    button.style.marginLeft = "8px";
-    plusButtonSpan.appendChild(button);
-    return;
+  console.log("[Prompt Optimizer] Strategy 2 - Leading area:", leadingArea);
+  if (leadingArea) {
+    const plusButtonSpan = leadingArea.querySelector("span.flex");
+    console.log("[Prompt Optimizer] Plus button span:", plusButtonSpan);
+    if (plusButtonSpan) {
+      plusButtonSpan.appendChild(button);
+      console.log("[Prompt Optimizer] \u2705 Button inserted via Strategy 2 (grid-area:leading)");
+      return;
+    }
   }
   const parent = target.parentElement;
+  console.log("[Prompt Optimizer] Strategy 3 - Target parent:", parent);
   if (parent) {
     parent.insertBefore(button, target);
-  } else {
-    target.insertAdjacentElement("beforebegin", button);
+    console.log("[Prompt Optimizer] \u2705 Button inserted via Strategy 3 (before target)");
+    return;
   }
+  target.insertAdjacentElement("beforebegin", button);
+  console.log("[Prompt Optimizer] \u2705 Button inserted via Strategy 4 (insertAdjacentElement)");
 }
 async function handleOptimize(button, target) {
+  console.log("[Prompt Optimizer] Optimize triggered");
   const originalPrompt = getPromptValue(target).trim();
   if (!originalPrompt) {
+    console.warn("[Prompt Optimizer] Empty prompt");
     button.textContent = "\u8BF7\u8F93\u5165\u5185\u5BB9";
     setTimeout(() => button.textContent = BUTTON_TEXT, 1200);
     return;
   }
+  console.log("[Prompt Optimizer] Original prompt:", originalPrompt.substring(0, 50) + "...");
   setLoading(button, true);
   try {
+    console.log("[Prompt Optimizer] Sending request to background...");
     const response = await chrome.runtime.sendMessage({
       type: MessageType.OptimizePrompt,
       payload: { originalPrompt, source: "content-script", pageHost: window.location.host }
     });
+    console.log("[Prompt Optimizer] Response:", response);
     if (!response?.success || !response.optimizedPrompt) {
       const msg = response?.error || "\u4F18\u5316\u5931\u8D25";
+      console.error("[Prompt Optimizer] Failed:", msg);
       button.textContent = msg;
       setTimeout(() => button.textContent = BUTTON_TEXT, 1400);
       return;
     }
+    console.log("[Prompt Optimizer] \u2705 Success, updating prompt");
     setPromptValue(target, response.optimizedPrompt);
   } catch (error) {
-    console.error("Optimize failed", error);
+    console.error("[Prompt Optimizer] Error:", error);
     button.textContent = "\u8BF7\u6C42\u9519\u8BEF";
     setTimeout(() => button.textContent = BUTTON_TEXT, 1400);
   } finally {
@@ -147,41 +156,70 @@ async function handleOptimize(button, target) {
 function setLoading(button, loading) {
   button.disabled = loading;
   button.textContent = loading ? "\u4F18\u5316\u4E2D\u2026" : BUTTON_TEXT;
+  if (loading) {
+    button.classList.add("loading");
+  } else {
+    button.classList.remove("loading");
+  }
 }
 function mount() {
+  console.log("[Prompt Optimizer] mount() called");
   const host = window.location.host;
   const supportedHosts = ["chatgpt.com", "chat.openai.com"];
   const isSupported = supportedHosts.some((h) => host.includes(h));
   if (!isSupported) {
-    console.log("[Prompt Optimizer] Skipping button injection - unsupported host:", host);
+    console.log("[Prompt Optimizer] Unsupported host:", host);
     return;
   }
+  console.log("[Prompt Optimizer] \u2705 Supported host:", host);
   const input = findPromptInput();
   if (input) {
+    console.log("[Prompt Optimizer] Input found immediately");
     insertButton(input);
     return;
   }
+  console.log("[Prompt Optimizer] Setting up MutationObserver...");
+  let attempts = 0;
+  const maxAttempts = 100;
   const observer = new MutationObserver(() => {
+    attempts++;
     const found = findPromptInput();
     if (found) {
+      console.log("[Prompt Optimizer] \u2705 Input found via observer (attempt", attempts, ")");
       insertButton(found);
+      observer.disconnect();
+    } else if (attempts >= maxAttempts) {
+      console.error("[Prompt Optimizer] \u274C Failed after", maxAttempts, "attempts");
       observer.disconnect();
     }
   });
   observer.observe(document.body, { childList: true, subtree: true });
 }
 if (document.readyState === "complete" || document.readyState === "interactive") {
+  console.log("[Prompt Optimizer] Document ready, mounting...");
   mount();
 } else {
-  window.addEventListener("DOMContentLoaded", mount);
+  console.log("[Prompt Optimizer] Waiting for DOMContentLoaded...");
+  window.addEventListener("DOMContentLoaded", () => {
+    console.log("[Prompt Optimizer] DOMContentLoaded fired");
+    mount();
+  });
 }
+setTimeout(() => {
+  console.log("[Prompt Optimizer] Delayed mount attempt (2s)");
+  mount();
+}, 2e3);
 chrome.runtime.onMessage.addListener((message) => {
   if (isTriggerOptimizeMessage(message)) {
+    console.log("[Prompt Optimizer] Keyboard shortcut triggered");
     const button = document.querySelector(`.${BUTTON_CLASS}`);
     const target = findPromptInput();
     if (button && target) {
       handleOptimize(button, target);
+    } else {
+      console.warn("[Prompt Optimizer] Cannot handle shortcut - button or input missing");
     }
   }
 });
+console.log("[Prompt Optimizer] Content script initialized");
 //# sourceMappingURL=content-script.js.map
