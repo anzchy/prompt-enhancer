@@ -1,7 +1,59 @@
 // src/shared/messages.ts
 var MessageType = {
-  OptimizePrompt: "OPTIMIZE_PROMPT"
+  OptimizePrompt: "OPTIMIZE_PROMPT",
+  TriggerOptimize: "TRIGGER_OPTIMIZE"
 };
+function isTriggerOptimizeMessage(message) {
+  if (!message || typeof message !== "object") return false;
+  const typed = message;
+  return typed.type === MessageType.TriggerOptimize;
+}
+
+// src/content/button-styles.ts
+function isDarkMode() {
+  return document.documentElement.classList.contains("dark");
+}
+function applyButtonStyles(button) {
+  const isDark = isDarkMode();
+  button.style.height = "36px";
+  button.style.padding = "0 16px";
+  button.style.display = "flex";
+  button.style.alignItems = "center";
+  button.style.justifyContent = "center";
+  button.style.borderRadius = "9999px";
+  button.style.border = "none";
+  button.style.cursor = "pointer";
+  button.style.fontSize = "14px";
+  button.style.fontWeight = "500";
+  button.style.transition = "opacity 0.2s";
+  button.style.whiteSpace = "nowrap";
+  button.style.background = isDark ? "#ffffff" : "#000000";
+  button.style.color = isDark ? "#000000" : "#ffffff";
+  button.addEventListener("mouseenter", () => {
+    if (!button.disabled) {
+      button.style.opacity = "0.7";
+    }
+  });
+  button.addEventListener("mouseleave", () => {
+    button.style.opacity = "1";
+  });
+  if (button.disabled) {
+    button.style.opacity = "0.5";
+    button.style.cursor = "not-allowed";
+  }
+}
+function observeThemeChanges(button) {
+  const observer = new MutationObserver(() => {
+    const isDark = isDarkMode();
+    button.style.background = isDark ? "#ffffff" : "#000000";
+    button.style.color = isDark ? "#000000" : "#ffffff";
+  });
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class"]
+  });
+  return observer;
+}
 
 // src/content/index.ts
 var BUTTON_CLASS = "prompt-enhancer-btn";
@@ -47,27 +99,22 @@ function insertButton(target) {
   button.type = "button";
   button.textContent = BUTTON_TEXT;
   button.className = BUTTON_CLASS;
-  styleButton(button);
+  applyButtonStyles(button);
+  observeThemeChanges(button);
   button.addEventListener("click", () => handleOptimize(button, target));
+  const leadingArea = document.querySelector('[class*="grid-area:leading"]');
+  const plusButtonSpan = leadingArea?.querySelector("span.flex");
+  if (plusButtonSpan) {
+    button.style.marginLeft = "8px";
+    plusButtonSpan.appendChild(button);
+    return;
+  }
   const parent = target.parentElement;
   if (parent) {
-    parent.appendChild(button);
+    parent.insertBefore(button, target);
   } else {
-    target.insertAdjacentElement("afterend", button);
+    target.insertAdjacentElement("beforebegin", button);
   }
-}
-function styleButton(button) {
-  button.style.marginLeft = "8px";
-  button.style.padding = "6px 12px";
-  button.style.borderRadius = "999px";
-  button.style.border = "1px solid rgba(0,0,0,0.1)";
-  button.style.background = "#f5f5f5";
-  button.style.color = "#111";
-  button.style.cursor = "pointer";
-  button.style.fontSize = "13px";
-  button.style.display = "inline-flex";
-  button.style.alignItems = "center";
-  button.style.gap = "6px";
 }
 async function handleOptimize(button, target) {
   const originalPrompt = getPromptValue(target).trim();
@@ -102,6 +149,13 @@ function setLoading(button, loading) {
   button.textContent = loading ? "\u4F18\u5316\u4E2D\u2026" : BUTTON_TEXT;
 }
 function mount() {
+  const host = window.location.host;
+  const supportedHosts = ["chatgpt.com", "chat.openai.com"];
+  const isSupported = supportedHosts.some((h) => host.includes(h));
+  if (!isSupported) {
+    console.log("[Prompt Optimizer] Skipping button injection - unsupported host:", host);
+    return;
+  }
   const input = findPromptInput();
   if (input) {
     insertButton(input);
@@ -121,4 +175,13 @@ if (document.readyState === "complete" || document.readyState === "interactive")
 } else {
   window.addEventListener("DOMContentLoaded", mount);
 }
+chrome.runtime.onMessage.addListener((message) => {
+  if (isTriggerOptimizeMessage(message)) {
+    const button = document.querySelector(`.${BUTTON_CLASS}`);
+    const target = findPromptInput();
+    if (button && target) {
+      handleOptimize(button, target);
+    }
+  }
+});
 //# sourceMappingURL=content-script.js.map
