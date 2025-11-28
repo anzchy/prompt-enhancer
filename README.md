@@ -1,151 +1,185 @@
 # Prompt Enhancer
 
-Optimize prompts inline on chat-based sites and via a popup. Features keyboard shortcuts, dark mode support, and seamless ChatGPT integration.
+> One-click inline prompt optimizer for ChatGPT, with a popup fallback for every site.
 
-**Current Version**: v0.1 with ChatGPT inline button enhancement
-**Supported Sites**: `chatgpt.com`, `chat.openai.com` (inline button), `manus.im`(popup only, inline button work in progress), `gemini.google.com` (popup only, inline button work in progress)
+![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Status](https://img.shields.io/badge/status-Draft%20feature%20branch%3A%20001--chatgpt--inline--button-orange.svg)
 
-## Requirements
+**Inject an “优化指令” button directly into the ChatGPT input area.** Click or press `Ctrl+Shift+O` / `Cmd+Shift+O` to replace your draft with a structured, optimized prompt—without leaving the chat. A popup workflow remains available for any site.
 
-- Node.js 18+ and npm (or pnpm).
-- Chrome (latest stable) for loading the unpacked extension.
+![Inline button](https://picbox-1313243162.cos.ap-nanjing.myqcloud.com/typora/image-20251128101626985.png)
+
+---
+
+## Quick Navigation
+
+- [Background & Goals](#background--goals)
+- [Features](#features)
+- [Supported Sites](#supported-sites)
+- [Installation](#installation)
+  - [Chrome (Manual)](#chrome-manual)
+  - [Microsoft Edge](#microsoft-edge)
+- [How to Use](#how-to-use)
+- [Configuration](#configuration)
+- [Testing & QA](#testing--qa)
+- [Troubleshooting](#troubleshooting)
+- [Privacy & Security](#privacy--security)
+- [Roadmap & Status](#roadmap--status)
+- [Support](#support)
+
+---
+
+## Background & Goals
+
+- Users rush prompts in ChatGPT, rarely pausing to add structure, context, or constraints.
+- Refining prompts elsewhere (Notion, IDE) then pasting back is a fragmented workflow.
+- Existing optimizers are web apps or CLIs; none sit natively inside ChatGPT.
+
+**Goal:** Reduce friction by injecting an inline “优化指令” button next to the ChatGPT input (by the “+” control). Reuse the existing extension stack (service worker, API config, LLM client) to optimize prompts in place while keeping popup mode for other sites.
+
+---
 
 ## Features
 
-### ChatGPT Inline Button (v0.1)
+### 🚀 Inline ChatGPT Optimizer (P1)
+- Visible “优化指令” button on chatgpt.com and chat.openai.com, positioned to the left of the input bar near the “+”.
+- Reads the current draft, sends it to the background worker, and replaces it with the optimized prompt (no auto-send; you can still edit).
+- Keyboard shortcut: `Ctrl+Shift+O` (Win/Linux) or `Cmd+Shift+O` (Mac) triggers the same flow.
+- Loads within ~500ms on page load; MutationObserver fallback covers DOM changes.
 
-- **One-Click Optimization**: "优化指令" button positioned left of ChatGPT input area, near the "+" button
+### 👀 Visual Feedback (P2)
+- Loading state: shows “优化中…” and disables the button during the API call.
+- Validation and errors: empty input (“请输入内容”), missing API key (“请先在 Options 页面配置 API Key”), network errors (“请求错误”), with automatic reset to the normal label.
+- Clear success path: optimized text appears immediately in the input box.
 
-  
+### 🎯 Placement & Styling (P3)
+- Button sits inside ChatGPT’s grid/action area without layout shift.
+- Pill-style design aligned to ChatGPT UI, adapts to light/dark themes automatically.
+- Hover/active states to signal interactivity.
 
-- **Keyboard Shortcut**: Press `Ctrl+Shift+O` (Windows/Linux) or `Cmd+Shift+O` (Mac) to optimize without clicking
+### 🪄 Popup Companion
+- Toolbar popup works on any site: paste a prompt, click “✨ Optimize,” copy or refine the result.
+- Shares the same API configuration and model selection as the inline flow.
 
-- **Dark Mode Support**: Button automatically adapts to ChatGPT's light/dark theme changes
+---
 
-- **Smart Positioning**: Uses ChatGPT's grid layout for seamless integration
+## Supported Sites
 
-- **Visual Feedback**: Loading states ("优化中…"), error messages, and success indicators
+| Site | Inline Button | Popup |
+|------|---------------|-------|
+| chatgpt.com | ✅ | ✅ |
+| chat.openai.com | ✅ | ✅ |
+| manus.im | 🚧 Inline planned (popup works) | ✅ |
+| gemini.google.com | 🚧 Inline planned (popup works) | ✅ |
 
+---
 
+## Installation
 
-- **Zero Layout Shift**: Button injection doesn't break ChatGPT's existing UI
+### Chrome (Manual)
 
-  
+Manual install is recommended while the feature branch is in draft:
 
-### Universal Features
+1. **Download** the repo (Code → Download ZIP) or grab the latest packaged folder.
+2. **Extract** to a permanent folder (do not delete after install).
+3. Open `chrome://extensions/`.
+4. Toggle **Developer mode** (top right).
+5. Click **Load unpacked**.
+6. Select the extracted folder that contains `manifest.json`.
+7. The extension icon appears in your toolbar.
 
-- **Popup Interface**: Works on all sites - click extension icon, paste prompt, optimize, and copy
-- **Configurable API**: Supports OpenAI API and compatible proxies (custom base URL, model, system prompt)
-- **Privacy First**: API keys stored locally only (never synced), all processing in browser extension sandbox
+### Microsoft Edge
 
-## Project Structure (repo root)
+1. Download and extract (same as above).
+2. Open `edge://extensions/`.
+3. Enable **Developer mode** in the left sidebar.
+4. Click **Load unpacked** and choose the extracted folder.
+5. Done.
 
-- `docs/` — versioned PRDs and plans (`docs/prd/v0.1.md`, `docs/plans/v0.1-plan.md`), decisions/roadmap.
-- `extension/` — extension codebase (this folder).
-- Future builds: `extension/dist/` (output), `extension/tests`, `extension/e2e` (as added).
+**Common questions**
+- Developer mode banner is normal for manually installed extensions.
+- To update, remove the old version from `chrome://extensions/` (or Edge equivalent) and load the new folder; local settings stay intact.
+- Change the shortcut at `chrome://extensions/shortcuts` if it conflicts with other tools.
 
-## Install (from `extension/`)
+---
 
-```bash
-npm install
-```
+## How to Use
 
-## Development (from `extension/`)
+### First-Time Setup
+- Install the extension via manual steps above.
+- Open the **Options** page to set API Base URL, API Key, model, and system prompt (see Configuration).
 
-Bundle source to `dist/` for Chrome to load.
+### Inline Flow (ChatGPT)
 
-```bash
-# Watch mode
-npm run dev
+1. Go to `https://chatgpt.com` or `https://chat.openai.com`.
+2. Type your prompt in the input field.
+3. Click the **“优化指令”** button (left side near “+”) or press `Ctrl+Shift+O` / `Cmd+Shift+O`.
+4. Button shows **“优化中…”** while processing.
+5. Your draft is replaced with the optimized prompt; edit further if needed, then press Enter to send.
 
-# One-off build
-npm run build
+### Popup Flow (Any Site)
 
-# Run unit tests (pure functions only)
-npm test
+1. Click the extension icon in the toolbar.
+2. Paste your prompt into the popup.
+3. Click **“✨ Optimize”** to generate the improved prompt.
+4. Copy or edit the output before using it elsewhere.
 
-# Clean dist
-npm run clean
-```
+---
 
-### Testing
+## Configuration
 
-- **Automated Tests**: 15 unit tests for pure functions (color logic, message validation, selector priority)
-- **Manual Testing**: Required for UI and Chrome API features (see Testing Guide below)
-- **Test Framework**: Node.js built-in test runner (zero dependencies)
+Open the **Options** page via `Extensions → Details → Extension options` (or `chrome-extension://<id>/options.html`).
 
-## Source Layout (inside `extension/`)
+- **API Base URL**: default `https://api.openai.com/v1` (no trailing slash). Works with compatible proxies.
+- **API Key**: stored locally in `chrome.storage.local`, never synced.
+- **Model**: default `gpt-4.1-mini`; set to the exact model ID exposed by your provider.
+- **System Prompt**: default is a concise “prompt upgrader”; customize if you need a different style.
 
-- `manifest.json` — MV3 manifest with keyboard shortcuts.
-- `src/` — code.
-  - `background/` — service worker, LLM calls, keyboard shortcut handler.
-  - `content/` — DOM hooks, injects optimize button, handles keyboard shortcuts.
-    - `button-styles.ts` — Dark mode detection and button styling utilities.
-  - `popup/` — popup UI.
-  - `options/` — options UI.
-  - `shared/` — config, messages, LLM client.
-- `test/` — unit tests for pure functions (Node.js test runner).
-- `scripts/build.js` — esbuild bundler (TS → `dist/`).
-- `AGENTS.md` — contributor guide for this folder.
+---
 
-## Configure (Options Page)
+## Testing & QA
 
-1) Load the unpacked extension (see next section).  
-2) In Chrome, `Extensions` → `Details` → `Extension options` (or open `chrome-extension://<id>/options.html`).  
-3) Fill fields:
-   - API Base URL (e.g., `https://api.openai.com/v1` or your proxy, no trailing slash).
-   - API Key (stored in `chrome.storage.local`, not synced).
-   - Model (e.g., `gpt-4.1-mini`).
-   - System Prompt (default is a concise prompt-upgrader).
-4) Save. Errors will display inline if storage fails.
+Field-verifiable acceptance checks (from the spec):
 
-### Model options
+- Button appears on ChatGPT input within ~500ms; fallback observer attaches if the first query fails.
+- Clicking “优化指令” with text shows loading, disables the button, then replaces input with the optimized prompt.
+- Empty input shows the temporary “请输入内容” message and resets automatically.
+- Missing API key shows “请先在 Options 页面配置 API Key.”
+- Network failure shows “请求错误,” then resets to the normal label.
+- Keyboard shortcut `Ctrl+Shift+O` / `Cmd+Shift+O` mirrors the click behavior.
+- No layout shift: button sits near the “+” control without overlapping ChatGPT UI; works in light/dark modes.
 
-- Common picks: `gpt-4.1-mini` (default), `gpt-4.1`, `gpt-4.1-preview`.
-- If your provider exposes GPT-5 family, set the Model field accordingly, e.g., `gpt-5` or `gpt-5-mini` (exact IDs depend on your API gateway). Use the model name exactly as your endpoint expects.
+---
 
+## Troubleshooting
 
+- **Button not visible**: confirm you’re on chatgpt.com or chat.openai.com and that the extension is enabled; refresh the page.
+- **Shortcut conflict**: adjust at `chrome://extensions/shortcuts`.
+- **No response**: ensure API key is set in Options and that your proxy/base URL is reachable.
+- **Repeated rapid clicks**: the button disables during processing to prevent concurrent requests; wait for the state to reset.
 
-## How to Use in Chrome
+---
 
-### Initial Setup
+## Privacy & Security
 
-1) From `extension/`, run `npm run build` (or `npm run dev` while working).
-2) Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select `extension/dist/`.
-3) Configure API key via Options page (see Configure section above).
+- API keys stay local in `chrome.storage.local`; nothing is synced or sent elsewhere.
+- All optimization requests go directly from the browser to your configured API endpoint.
+- No analytics, no tracking, no external servers.
 
-### ChatGPT Inline Usage
+---
 
-1) Navigate to https://chatgpt.com or https://chat.openai.com
-2) Look for the "优化指令" button on the **left side** of the input area, next to the "+" button
+## Roadmap & Status
 
-![image-20251128101626985](https://picbox-1313243162.cos.ap-nanjing.myqcloud.com/typora/image-20251128101626985.png)
+- **Branch**: `001-chatgpt-inline-button` (draft).
+- **Current scope**: ChatGPT inline button + popup.
+- **Planned next**: inline support for manus.im and gemini.google.com; style presets and comparison view are deferred.
+- **Success targets**: optimize within 3 seconds, 95% first-try button injection, zero layout shift, clear loading/error states.
 
-3. Type your prompt in the ChatGPT input box
+---
 
-4. **Click the button** or press **`Ctrl+Shift+O`** (Windows/Linux) / **`Cmd+Shift+O`** (Mac)
+## Support
 
-5. The button shows "优化中…" while processing
+- Found an issue or idea? Open a ticket in this repo.
+- If this helps your ChatGPT workflow, consider starring the project.
 
-![image-20251128101715600](https://picbox-1313243162.cos.ap-nanjing.myqcloud.com/typora/image-20251128101715600.png)
-
-6.Your prompt is replaced with the optimized version (you can still edit before sending)
-
-![image-20251128101843415](https://picbox-1313243162.cos.ap-nanjing.myqcloud.com/typora/image-20251128101843415.png)
-
-**Keyboard Shortcut Customization**: Go to `chrome://extensions/shortcuts` to change the default shortcut.
-
-### Popup Usage (All Sites)
-
-1) Click the toolbar icon on any website
-2) Paste a prompt into the text area
-3) Click "✨ 优化"
-4) Copy or edit the optimized result
-
-### Visual Feedback
-
-- **Loading**: "优化中…" (button disabled)
-- **Empty Input**: "请输入内容" (1.2 seconds)
-- **Missing API Key**: "请先在 Options 页面配置 API Key" (1.4 seconds)
-- **Network Error**: "请求错误" (1.4 seconds)
-- **Success**: Original prompt replaced with optimized version
