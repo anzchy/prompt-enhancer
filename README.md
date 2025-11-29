@@ -2,9 +2,9 @@
 
 > One-click inline prompt optimizer for ChatGPT, with a popup fallback for every site.
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Status](https://img.shields.io/badge/status-Draft%20feature%20branch%3A%20001--chatgpt--inline--button-orange.svg)
+![Status](https://img.shields.io/badge/status-Draft%20feature%20branch%3A%20002--multi--site--support-orange.svg)
 
 **Inject an “优化指令” button directly into the ChatGPT input area.** Click or press `Ctrl+Shift+O` / `Cmd+Shift+O` to replace your draft with a structured, optimized prompt—without leaving the chat. A popup workflow remains available for any site.
 
@@ -70,8 +70,8 @@
 |------|---------------|-------|
 | chatgpt.com | ✅ | ✅ |
 | chat.openai.com | ✅ | ✅ |
-| manus.im | 🚧 Inline planned (popup works) | ✅ |
-| gemini.google.com | 🚧 Inline planned (popup works) | ✅ |
+| manus.im | ✅ | ✅ |
+| gemini.google.com | ✅ | ✅ |
 
 ---
 
@@ -110,9 +110,9 @@ Manual install is recommended while the feature branch is in draft:
 - Install the extension via manual steps above.
 - Open the **Options** page to set API Base URL, API Key, model, and system prompt (see Configuration).
 
-### Inline Flow (ChatGPT)
+### Inline Flow (ChatGPT/ Manus/ Gemini)
 
-1. Go to `https://chatgpt.com` or `https://chat.openai.com`.
+1. Go to `https://chatgpt.com` or `https://manus.im` or `https://gemini.google.com`.
 2. Type your prompt in the input field.
 3. Click the **“优化指令”** button (left side near “+”) or press `Ctrl+Shift+O` / `Cmd+Shift+O`.
 4. Button shows **“优化中…”** while processing.
@@ -122,7 +122,7 @@ Manual install is recommended while the feature branch is in draft:
 
 1. Click the extension icon in the toolbar.
 2. Paste your prompt into the popup.
-3. Click **“✨ Optimize”** to generate the improved prompt.
+3. Click **“优化”** to generate the improved prompt.
 4. Copy or edit the output before using it elsewhere.
 
 ---
@@ -135,6 +135,25 @@ Open the **Options** page via `Extensions → Details → Extension options` (or
 - **API Key**: stored locally in `chrome.storage.local`, never synced.
 - **Model**: default `gpt-4.1-mini`; set to the exact model ID exposed by your provider.
 - **System Prompt**: default is a concise “prompt upgrader”; customize if you need a different style.
+
+|              | Chatgpt                      | Gemini                                                   |
+| ------------ | ---------------------------- | -------------------------------------------------------- |
+| API Base URL | https://api.openai.com/v1    | https://generativelanguage.googleapis.com/v1beta/openai/ |
+| API Key      | get from openai api platfrom | get it from Google AI Studio                             |
+| Model        | `gpt-4.1` or `gpt-4.1-mini`  | `gemini-3-pro-preview`                                   |
+
+
+
+System Prompt Example:
+
+> You are an expert Prompt Engineer. Your task is to rewrite the user's input prompt to be concise, structured, and highly effective (clarifying roles, objectives, and constraints).
+>
+> **Critical Language Rule:**
+>
+> - If the user's input is in **Chinese**, the optimized prompt must be in **Chinese**.
+> - If the user's input is in **English**, the optimized prompt must be in **English**.
+>
+> **Constraint:** Return **only** the improved prompt text. Do not include any explanations, preambles, or conversational filler.
 
 ---
 
@@ -166,15 +185,6 @@ Field-verifiable acceptance checks (from the spec):
 - API keys stay local in `chrome.storage.local`; nothing is synced or sent elsewhere.
 - All optimization requests go directly from the browser to your configured API endpoint.
 - No analytics, no tracking, no external servers.
-
----
-
-## Roadmap & Status
-
-- **Branch**: `001-chatgpt-inline-button` (draft).
-- **Current scope**: ChatGPT inline button + popup.
-- **Planned next**: inline support for manus.im and gemini.google.com; style presets and comparison view are deferred.
-- **Success targets**: optimize within 3 seconds, 95% first-try button injection, zero layout shift, clear loading/error states.
 
 ---
 
