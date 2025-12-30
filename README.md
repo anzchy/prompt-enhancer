@@ -136,11 +136,11 @@ Open the **Options** page via `Extensions → Details → Extension options` (or
 - **Model**: default `gpt-4.1-mini`; set to the exact model ID exposed by your provider.
 - **System Prompt**: default is a concise “prompt upgrader”; customize if you need a different style.
 
-|              | Chatgpt                      | Gemini                                                   |
-| ------------ | ---------------------------- | -------------------------------------------------------- |
-| API Base URL | https://api.openai.com/v1    | https://generativelanguage.googleapis.com/v1beta/openai/ |
-| API Key      | get from openai api platfrom | get it from Google AI Studio                             |
-| Model        | `gpt-4.1` or `gpt-4.1-mini`  | `gemini-3-pro-preview`                                   |
+|              | Chatgpt                      | Gemini                                                   | Openrouter                                                   |
+| ------------ | ---------------------------- | -------------------------------------------------------- | ------------------------------------------------------------ |
+| API Base URL | https://api.openai.com/v1    | https://generativelanguage.googleapis.com/v1beta/openai/ | https://openrouter.ai/api/v1                                 |
+| API Key      | get from openai api platfrom | get it from Google AI Studio                             | Get from openrouter.ai website                               |
+| Model        | `gpt-4.1` or `gpt-4.1-mini`  | `gemini-3-pro-preview`                                   | `openai/gpt-5.2` or `anthropic/claude-sonnet-4.5` or `google/gemini-3-flash-preview` |
 
 
 
