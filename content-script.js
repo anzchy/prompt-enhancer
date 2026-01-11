@@ -1,7 +1,13 @@
 // src/shared/messages.ts
 var MessageType = {
   OptimizePrompt: "OPTIMIZE_PROMPT",
-  TriggerOptimize: "TRIGGER_OPTIMIZE"
+  TriggerOptimize: "TRIGGER_OPTIMIZE",
+  GetTemplates: "GET_TEMPLATES",
+  SetSelectedTemplate: "SET_SELECTED_TEMPLATE",
+  SaveCustomTemplate: "SAVE_CUSTOM_TEMPLATE",
+  DeleteCustomTemplate: "DELETE_CUSTOM_TEMPLATE",
+  ImportTemplates: "IMPORT_TEMPLATES",
+  ExportTemplates: "EXPORT_TEMPLATES"
 };
 function isTriggerOptimizeMessage(message) {
   if (!message || typeof message !== "object") return false;
@@ -31,6 +37,9 @@ function observeThemeChanges(button) {
 // src/content/shared/button-controller.ts
 var BUTTON_CLASS = "prompt-enhancer-btn";
 var BUTTON_TEXT = "\u4F18\u5316\u6307\u4EE4";
+var MENU_CLASS = "prompt-enhancer-scenario-menu";
+var currentTemplateId = "general";
+var activeMenu = null;
 function createButton() {
   const button = document.createElement("button");
   button.type = "button";
@@ -38,7 +47,135 @@ function createButton() {
   button.className = BUTTON_CLASS;
   applyButtonStyles(button);
   observeThemeChanges(button);
+  button.addEventListener("contextmenu", handleContextMenu);
+  loadCurrentTemplateId();
   return button;
+}
+async function loadCurrentTemplateId() {
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: MessageType.GetTemplates
+    });
+    if (response?.success && response.selectedTemplateId) {
+      currentTemplateId = response.selectedTemplateId;
+    }
+  } catch (error) {
+    console.error("[Prompt Optimizer] Failed to load template ID:", error);
+  }
+}
+function handleContextMenu(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  closeScenarioMenu();
+  showScenarioMenu(event.clientX, event.clientY);
+}
+async function showScenarioMenu(x, y) {
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: MessageType.GetTemplates
+    });
+    if (!response?.success || !response.templates) {
+      console.error("[Prompt Optimizer] Failed to load templates");
+      return;
+    }
+    currentTemplateId = response.selectedTemplateId;
+    const menu = createScenarioMenu(response.templates, response.selectedTemplateId);
+    positionMenu(menu, x, y);
+    document.body.appendChild(menu);
+    activeMenu = menu;
+    setTimeout(() => {
+      document.addEventListener("click", handleClickOutside);
+      document.addEventListener("contextmenu", handleClickOutside);
+    }, 0);
+  } catch (error) {
+    console.error("[Prompt Optimizer] Failed to show scenario menu:", error);
+  }
+}
+function createScenarioMenu(templates, selectedId) {
+  const menu = document.createElement("div");
+  menu.className = MENU_CLASS;
+  const presets = templates.filter((t) => t.type === "preset");
+  const custom = templates.filter((t) => t.type === "custom");
+  if (presets.length > 0) {
+    const presetHeader = document.createElement("div");
+    presetHeader.className = "menu-header";
+    presetHeader.textContent = "\u9884\u8BBE\u6A21\u677F";
+    menu.appendChild(presetHeader);
+    for (const template of presets) {
+      menu.appendChild(createMenuItem(template, selectedId));
+    }
+  }
+  if (custom.length > 0) {
+    const customHeader = document.createElement("div");
+    customHeader.className = "menu-header";
+    customHeader.textContent = "\u81EA\u5B9A\u4E49\u6A21\u677F";
+    menu.appendChild(customHeader);
+    for (const template of custom) {
+      menu.appendChild(createMenuItem(template, selectedId));
+    }
+  }
+  return menu;
+}
+function createMenuItem(template, selectedId) {
+  const item = document.createElement("div");
+  item.className = "menu-item";
+  if (template.id === selectedId) {
+    item.classList.add("selected");
+  }
+  const icon = template.icon || "\u{1F4DD}";
+  item.textContent = `${icon} ${template.name}`;
+  if (template.description) {
+    item.title = template.description;
+  }
+  item.addEventListener("click", () => handleTemplateSelect(template.id));
+  return item;
+}
+function positionMenu(menu, x, y) {
+  menu.style.position = "fixed";
+  menu.style.left = `${x}px`;
+  menu.style.top = `${y}px`;
+  menu.style.zIndex = "2147483647";
+  requestAnimationFrame(() => {
+    const rect = menu.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    if (rect.right > viewportWidth) {
+      menu.style.left = `${viewportWidth - rect.width - 10}px`;
+    }
+    if (rect.bottom > viewportHeight) {
+      menu.style.top = `${viewportHeight - rect.height - 10}px`;
+    }
+  });
+}
+async function handleTemplateSelect(templateId) {
+  closeScenarioMenu();
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: MessageType.SetSelectedTemplate,
+      payload: { templateId }
+    });
+    if (response?.success) {
+      currentTemplateId = templateId;
+      console.log("[Prompt Optimizer] Template changed to:", templateId);
+    } else {
+      console.error("[Prompt Optimizer] Failed to set template:", response?.error);
+    }
+  } catch (error) {
+    console.error("[Prompt Optimizer] Error setting template:", error);
+  }
+}
+function closeScenarioMenu() {
+  if (activeMenu) {
+    activeMenu.remove();
+    activeMenu = null;
+  }
+  document.removeEventListener("click", handleClickOutside);
+  document.removeEventListener("contextmenu", handleClickOutside);
+}
+function handleClickOutside(event) {
+  if (activeMenu && !activeMenu.contains(event.target)) {
+    closeScenarioMenu();
+  }
 }
 async function handleOptimize(button, target, getPromptValue, setPromptValue) {
   console.log("[Prompt Optimizer] Optimize triggered");
@@ -52,10 +189,15 @@ async function handleOptimize(button, target, getPromptValue, setPromptValue) {
   console.log("[Prompt Optimizer] Original prompt:", originalPrompt.substring(0, 50) + "...");
   setLoading(button, true);
   try {
-    console.log("[Prompt Optimizer] Sending request to background...");
+    console.log("[Prompt Optimizer] Sending request to background with template:", currentTemplateId);
     const response = await chrome.runtime.sendMessage({
       type: MessageType.OptimizePrompt,
-      payload: { originalPrompt, source: "content-script", pageHost: window.location.host }
+      payload: {
+        originalPrompt,
+        templateId: currentTemplateId,
+        source: "content-script",
+        pageHost: window.location.host
+      }
     });
     console.log("[Prompt Optimizer] Response:", response);
     if (!response?.success || !response.optimizedPrompt) {

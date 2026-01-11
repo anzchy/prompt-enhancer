@@ -55,9 +55,43 @@
         font-size: 12px;
         color: #555;
       }
+      .scenario-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .scenario-label {
+        font-weight: 600;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      #scenarioSelect {
+        flex: 1;
+        min-width: 0;
+      }
+      .scenario-status {
+        font-size: 11px;
+        color: #28a745;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .scenario-status.show {
+        opacity: 1;
+      }
     </style>
   </head>
   <body>
+    <div class="scenario-row">
+      <label for="scenarioSelect" class="scenario-label">场景:</label>
+      <select id="scenarioSelect">
+        <optgroup label="预设模板" id="presetGroup"></optgroup>
+        <optgroup label="自定义模板" id="customGroup"></optgroup>
+      </select>
+      <span id="scenarioStatus" class="scenario-status"></span>
+    </div>
+
     <div>
       <div class="label">原始 Prompt</div>
       <textarea id="inputPrompt" placeholder="输入需要优化的 Prompt"></textarea>
@@ -67,9 +101,6 @@
       <button id="optimizeBtn">✨ 优化</button>
       <button id="copyBtn">📋 复制优化结果</button>
       <button id="clearBtn">🧹 清空</button>
-      <select id="styleSelect">
-        <option value="default">通用</option>
-      </select>
     </div>
 
     <div>
